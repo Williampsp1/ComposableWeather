@@ -8,18 +8,6 @@
 import SwiftUI
 import ComposableArchitecture
 
-struct City: Equatable, Identifiable {
-    let id: Int
-    var state: String
-    var farenheitTemp: Int
-    var celsiusTemp: Int
-    var country: String
-    var city: String
-    var lat: Double
-    var lon: Double
-    var imageIcon: Image
-}
-
 struct AppState: Equatable {
     var locations: IdentifiedArrayOf<Location> = []
     var cities: [City] = []
@@ -28,14 +16,15 @@ struct AppState: Equatable {
     var state: String = ""
     var country: String = ""
     var requestInFlightCity: Location?
+    var requestInFlightCity2: City?
     var measurements = ["Fahrenheit °F", "Celsius °C"]
     var selectedTemp: String = "Fahrenheit °F"
     var savedLocations: [Int] = []
     var lat: Double = 0
     var lon: Double = 0
     var completedCity: City?
+    var isRefreshing: Bool = false
 }
-
 
 extension AppState {
     var searchCityState: SearchCityState {
@@ -70,11 +59,14 @@ extension AppState {
     }
 }
 
-enum AppAction {
+enum AppAction: Equatable {
     case deleteCity(IndexSet)
     case searchCityView(SearchCityAction)
     case clearCities
     case scaleChanged(String)
+    case updateWeather(City)
+    case isRefreshing
+    case weatherResponse(Result<LocationWeather, WeatherClient.Failure>)
 }
 
 struct AppEnvironment {
@@ -98,95 +90,35 @@ let appReducer = Reducer<AppState, AppAction, AppEnvironment>.combine( Reducer {
     case let .scaleChanged(unit):
         state.selectedTemp = unit
         return .none
+        
+    case .isRefreshing:
+        state.isRefreshing.toggle()
+        return .none
+        
+    case let .updateWeather(city):
+        
+        return environment.weatherClient.weather(city.lat, city.lon)
+        .receive(on: environment.mainQueue)
+        .catchToEffect(AppAction.weatherResponse)
+
+    case let .weatherResponse(.success(response)):
+        
+        if let row = state.cities.firstIndex(where: {$0.id == response.id}) {
+            state.cities[row].farenheitTemp = response.farenheitTemp
+            state.cities[row].celsiusTemp = response.celsiusTemp
+            state.cities[row].imageIcon = response.imageIcon
+        }
+        return .none
+        
+    case let .weatherResponse(.failure(response)):
+        return .none
     }
+    
 },  searchCityReducer.pullback(
     state: \AppState.searchCityState,
     action: /AppAction.searchCityView,
     environment: { SearchCityEnvironment(weatherClient: $0.weatherClient, mainQueue: $0.mainQueue)})
 )
-
-struct SearchCityState: Equatable {
-    var cityQuery = ""
-    var locations: IdentifiedArrayOf<Location> = []
-    var cities: [City] = []
-    var city: String = ""
-    var state: String = ""
-    var country: String = ""
-    var requestInFlightCity: Location?
-    var savedLocations: [Int] = []
-    var lat: Double = 0
-    var lon: Double = 0
-    var completedCity: City?
-    
-}
-
-enum SearchCityAction: Equatable {
-    case cityQueryChanged(String)
-    case locationResponse(Result<IdentifiedArrayOf<Location>, WeatherClient.Failure>)
-    case weatherResponse(Result<LocationWeather, WeatherClient.Failure>)
-    case locationTapped(Location)
-}
-
-struct SearchCityEnvironment{
-    var weatherClient: WeatherClient
-    var mainQueue: AnySchedulerOf<DispatchQueue>
-}
-
-let searchCityReducer: Reducer<SearchCityState, SearchCityAction, SearchCityEnvironment> = Reducer { state, action, environment in
-    switch action {
-    case let .cityQueryChanged(query):
-        struct SearchLocationId: Hashable {}
-        
-        state.cityQuery = query
-        
-        if query.isEmpty {
-            state.locations = []
-            state.completedCity = nil
-            return .cancel(id: SearchLocationId())
-        }
-        
-        return environment.weatherClient
-            .searchCity(query)
-            .debounce(id: SearchLocationId(), for: 0.3, scheduler: environment.mainQueue)
-            .catchToEffect(SearchCityAction.locationResponse)
-        
-    case let .locationResponse(.success(response)):
-        state.locations = response
-        print(state.locations)
-        return .none
-        
-    case .locationResponse(.failure):
-        state.locations = []
-        return .none
-        
-    case let .weatherResponse(.success(response)):
-        guard let city = state.requestInFlightCity else {
-            return .none
-        }
-        
-        state.completedCity = City(id: response.id, state: city.actualState, farenheitTemp: response.farenheitTemp, celsiusTemp: response.celsiusTemp, country: city.country, city: city.city, lat: city.lat, lon: city.lon, imageIcon: response.imageIcon)
-        
-        guard let completedCity = state.completedCity else {
-            return .none
-        }
-        
-        state.cities.append(completedCity)
-        state.requestInFlightCity = nil
-        return .none
-        
-    case let .weatherResponse(.failure(response)):
-        state.completedCity = nil
-        state.requestInFlightCity = nil
-        return .none
-        
-    case let .locationTapped(location):
-        state.requestInFlightCity = location
-        
-        return environment.weatherClient.weather(location.lat, location.lon)
-            .receive(on: environment.mainQueue)
-            .catchToEffect(SearchCityAction.weatherResponse)
-    }
-}
 
 struct ContentView: View {
     let store: Store<AppState, AppAction>
@@ -204,6 +136,15 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItemGroup {
                         HStack {
+                            Button(action: {
+                                viewStore.send(.isRefreshing)
+                                for city in viewStore.cities {
+                                    viewStore.send(.updateWeather(city))
+                                }
+                                viewStore.send(.isRefreshing)                                
+                            }) { Text("Refresh")}
+                                .disabled(viewStore.isRefreshing)
+                            
                             searchCityItem
                             configurationMenuItems
                         }
@@ -282,80 +223,6 @@ struct ContentView: View {
                 .foregroundColor(.black)
         }
         }
-    }
-}
-
-struct SearchCityView: View {
-    let store: Store<SearchCityState, SearchCityAction>
-    
-    var body: some View {
-        WithViewStore(self.store) { viewStore in
-            HStack {
-                searchCityView
-            }
-            .padding()
-            List {
-                locationsView
-            }
-            .navigationTitle("Search City")
-        }
-    }
-    
-    var searchCityView: some View {
-        WithViewStore(self.store) { viewStore in
-            Image(systemName: "magnifyingglass")
-            TextField("Chicago, New York....",
-                      text: viewStore.binding(get: \.cityQuery, send: SearchCityAction.cityQueryChanged))
-                .textFieldStyle(.roundedBorder)
-                .autocapitalization(.none)
-                .disableAutocorrection(true)
-        }
-    }
-    
-    var locationsView: some View {
-        WithViewStore(self.store) { viewStore in
-            ForEach(viewStore.locations) { location in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(location.city)
-                            .font(.headline)
-                        
-                        Group {
-                            if location.actualState.isEmpty {
-                                Text(location.countryName)
-                            } else {
-                                Text(location.actualState + ", " + location.countryName)
-                            }
-                        }
-                        .font(.footnote)
-                    }
-                    
-                    Spacer()
-                    
-                    if !viewStore.cities.contains(where: { $0.lat == location.lat && $0.lon == location.lon }) {
-                        Button(action: { viewStore.send(.locationTapped(location))}) {
-                            Text("Add")
-                                .font(.footnote)
-                        }
-                        .buttonStyle(BlueButton())
-                    } else {
-                        Text("Added")
-                    }
-                }
-            }
-        }
-    }
-    
-}
-struct BlueButton: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .padding(10)
-            .background(Color.blue)
-            .foregroundColor(.white)
-            .clipShape(Capsule())
-            .scaleEffect(configuration.isPressed ? 1.2 : 1)
-            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
     }
 }
 

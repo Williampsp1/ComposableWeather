@@ -167,4 +167,27 @@ class ComposableWeatherTests: XCTestCase {
             $0.selectedTemp = "Celsius °C"
         }
     }
+    
+    func testUpdateWeather() {
+        let specialLocationWeather = LocationWeather(weather: mockWeatherDescription, main: mockMainTemp, name: "omaha", sys: mockMoreInfo, id: 1)
+        let state = AppState(cities: mockCities)
+        let store = TestStore(initialState: state, reducer: appReducer, environment: AppEnvironment(weatherClient: .failing, mainQueue: self.scheduler.eraseToAnyScheduler()))
+        
+        store.environment.weatherClient.weather = { _,_ in Effect(value: specialLocationWeather)}
+        store.send(.isRefreshing) {
+            $0.isRefreshing = true
+        }
+        store.send(.updateWeather(mockCities[0])) { _ in 
+
+        }
+        self.scheduler.advance()
+        store.receive(.weatherResponse(.success(specialLocationWeather))){
+            $0.cities[0].farenheitTemp = specialLocationWeather.farenheitTemp
+            $0.cities[0].celsiusTemp = specialLocationWeather.celsiusTemp
+            $0.cities[0].imageIcon = specialLocationWeather.imageIcon
+        }
+        store.send(.isRefreshing) {
+            $0.isRefreshing = false
+        }
+    }
 }
