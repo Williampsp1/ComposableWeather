@@ -24,6 +24,10 @@ struct AppState: Equatable {
     var lon: Double = 0
     var completedCity: City?
     var isRefreshing: Bool = false
+    
+    init(){
+        UITableView.appearance().backgroundColor = .clear
+    }
 }
 
 extension AppState {
@@ -122,6 +126,7 @@ let appReducer = Reducer<AppState, AppAction, AppEnvironment>.combine( Reducer {
 
 struct ContentView: View {
     let store: Store<AppState, AppAction>
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         NavigationView {
@@ -142,7 +147,8 @@ struct ContentView: View {
                                     viewStore.send(.updateWeather(city))
                                 }
                                 viewStore.send(.isRefreshing)                                
-                            }) { Text("Refresh")}
+                            }) { Image(systemName: "arrow.clockwise.circle")
+                            }
                                 .disabled(viewStore.isRefreshing)
                             
                             searchCityItem
@@ -194,8 +200,8 @@ struct ContentView: View {
                 Text("Search City")
             }
             .padding(5)
-            .background(Color.black)
-            .foregroundColor(.white)
+            .background(colorScheme == .dark ? .white : .black)
+            .foregroundColor(colorScheme == .dark ? .black : .white)
             .cornerRadius(15)
         }
     }
@@ -220,7 +226,7 @@ struct ContentView: View {
             }
         label: {
             Image(systemName: "gearshape")
-                .foregroundColor(.black)
+                .foregroundColor(colorScheme == .dark ? .white : .black)
         }
         }
     }
