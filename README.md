@@ -1,6 +1,6 @@
 # ComposableWeather
 
-Built fully using the Composable Architecture
+Built fully using the <a href="https://github.com/pointfreeco/swift-composable-architecture#:~:text=The%20Composable%20Architecture%20(TCA%2C%20for,%2C%20tvOS%2C%20and%20watchOS).">Composable Architecture</a> by <a href= "https://www.pointfree.co/">Point Free </a> 
 
 Made up of two views
 - Main weather view: Contains the list of cities that have been added, refresh and configuration buttons.
