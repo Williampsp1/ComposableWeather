@@ -134,13 +134,14 @@ struct ContentView: View {
                     .onDelete { viewStore.send(.deleteCity($0))}
                 }
                 .navigationTitle("Weather")
+                .navigationBarTitleDisplayMode(.large)
                 .toolbar {
                     ToolbarItemGroup {
                         ToolbarItems(store: self.store)
                     }
                 }
             }
-        }.navigationViewStyle(StackNavigationViewStyle())
+        }.navigationViewStyle(.stack)
     }  
 }
 
