@@ -144,7 +144,7 @@ struct SearchCityView: View {
                         }
                         .buttonStyle(BlueButton())
                     } else {
-                        Text("Added")
+                        Text("Added ✅")
                     }
                 }
             }

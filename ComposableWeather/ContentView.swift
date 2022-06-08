@@ -24,10 +24,6 @@ struct AppState: Equatable {
     var lon: Double = 0
     var completedCity: City?
     var isRefreshing: Bool = false
-    
-    init(){
-        UITableView.appearance().backgroundColor = .clear
-    }
 }
 
 extension AppState {
@@ -140,96 +136,12 @@ struct ContentView: View {
                 .navigationTitle("Weather")
                 .toolbar {
                     ToolbarItemGroup {
-                        HStack {
-                            Button(action: {
-                                viewStore.send(.isRefreshing)
-                                for city in viewStore.cities {
-                                    viewStore.send(.updateWeather(city))
-                                }
-                                viewStore.send(.isRefreshing)                                
-                            }) { Image(systemName: "arrow.clockwise.circle")
-                            }
-                                .disabled(viewStore.isRefreshing)
-                            
-                            searchCityItem
-                            configurationMenuItems
-                        }
+                        ToolbarItems(store: self.store)
                     }
                 }
             }
-        }
-    }
-    
-    struct CityTemperatureView: View {
-        let store: Store<AppState, AppAction>
-        let city: City
-        var body: some View {
-            WithViewStore(self.store) { viewStore in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(city.city)
-                            .font(.headline)
-                        
-                        Group {
-                            if city.state.isEmpty {
-                                Text(city.country)
-                            } else {
-                                Text(city.state + ", " + city.country)
-                            }
-                        }
-                        .font(.subheadline)
-                    }
-                    
-                    Spacer()
-                    
-                    if viewStore.selectedTemp.contains("Fahrenheit"){
-                        Text("\(city.farenheitTemp) °F")
-                    } else {
-                        Text("\(city.celsiusTemp) °C")
-                    }
-                    city.imageIcon
-                }
-            }
-        }
-    }
-    
-    var searchCityItem: some View {
-        NavigationLink(destination: SearchCityView(store: self.store.scope(state: \.searchCityState, action: AppAction.searchCityView))){
-            HStack {
-                Image(systemName: "magnifyingglass")
-                Text("Search City")
-            }
-            .padding(5)
-            .background(colorScheme == .dark ? .white : .black)
-            .foregroundColor(colorScheme == .dark ? .black : .white)
-            .cornerRadius(15)
-        }
-    }
-    
-    var configurationMenuItems: some View {
-        WithViewStore(self.store) { viewStore in
-            Menu {
-                Picker(
-                    "Scale", selection: viewStore.binding(
-                        get: \.selectedTemp,
-                        send: AppAction.scaleChanged
-                    )) {
-                        ForEach(viewStore.measurements, id: \.self) {
-                            Text($0)
-                        }
-                    }
-                Button(action: {
-                    viewStore.send(.clearCities)
-                }) {
-                    Text("Clear All")
-                }
-            }
-        label: {
-            Image(systemName: "gearshape")
-                .foregroundColor(colorScheme == .dark ? .white : .black)
-        }
-        }
-    }
+        }.navigationViewStyle(StackNavigationViewStyle())
+    }  
 }
 
 struct ContentView_Previews: PreviewProvider {

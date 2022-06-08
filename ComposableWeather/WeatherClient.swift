@@ -30,10 +30,9 @@ struct Location: Decodable, Equatable, Identifiable  {
     }
     
     enum CodingKeys: String, CodingKey {
-           // include only those that you want to decode/encode
-           case city = "name"
-           case lat, lon, country, state
-       }
+        case city = "name"
+        case lat, lon, country, state
+    }
     
 }
 
@@ -78,28 +77,28 @@ extension WeatherClient{
     static let live = Self(
         searchCity: { city in
             var components = URLComponents(string: "https://api.openweathermap.org/geo/1.0/direct")!
-                components.queryItems = [URLQueryItem(name: "q", value: city), URLQueryItem(name: "limit", value: searchResultLimit), URLQueryItem(name: "appid", value: apiKey)]
-                print(components.url!)
-               return URLSession.shared.dataTaskPublisher(for: components.url!)
-                    .map { data, _ in
-                        print("JSON String: \(String(data: data, encoding: .utf8))")
-                        return data
-                    }
-                    .decode(type: IdentifiedArrayOf<Location>.self, decoder: JSONDecoder())
-                    .mapError { _ in Failure()}
-                    .eraseToEffect()
+            components.queryItems = [URLQueryItem(name: "q", value: city), URLQueryItem(name: "limit", value: searchResultLimit), URLQueryItem(name: "appid", value: apiKey)]
+            print(components.url!)
+            return URLSession.shared.dataTaskPublisher(for: components.url!)
+                .map { data, _ in
+                    print("JSON String: \(String(data: data, encoding: .utf8))")
+                    return data
+                }
+                .decode(type: IdentifiedArrayOf<Location>.self, decoder: JSONDecoder())
+                .mapError { _ in Failure()}
+                .eraseToEffect()
         },
         weather: { lat, lon in
             var components = URLComponents(string: "https://api.openweathermap.org/data/2.5/weather")!
-                components.queryItems = [URLQueryItem(name: "lat", value: "\(lat)"), URLQueryItem(name: "lon", value: "\(lon)"), URLQueryItem(name: "appid", value: apiKey), URLQueryItem(name: "units", value: unitOfMeasurement)]
+            components.queryItems = [URLQueryItem(name: "lat", value: "\(lat)"), URLQueryItem(name: "lon", value: "\(lon)"), URLQueryItem(name: "appid", value: apiKey), URLQueryItem(name: "units", value: unitOfMeasurement)]
             print(components.url!)
-               return URLSession.shared.dataTaskPublisher(for: components.url!)
-                    .map { data, _ in data }
-                    .decode(type: LocationWeather.self, decoder: JSONDecoder())
-                    .mapError { _ in Failure()}
-                    .eraseToEffect()
-        
-    })
+            return URLSession.shared.dataTaskPublisher(for: components.url!)
+                .map { data, _ in data }
+                .decode(type: LocationWeather.self, decoder: JSONDecoder())
+                .mapError { _ in Failure()}
+                .eraseToEffect()
+            
+        })
 }
 extension WeatherClient {
     static let failing = Self(
@@ -183,5 +182,5 @@ extension LocationWeather.WeatherDescription {
                 return Image(systemName: "cloud.fog.fill")
             }
         }
-}
+    }
 }

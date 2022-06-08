@@ -19,4 +19,8 @@ struct ComposableWeatherApp: App {
             )
         }
     }
+    
+    init(){
+        UITableView.appearance().backgroundColor = .clear
+    }
 }
