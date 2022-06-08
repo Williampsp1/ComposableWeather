@@ -14,6 +14,6 @@ Features
 
 <p>
 <img src= "https://user-images.githubusercontent.com/43650249/163662178-4ca28a32-eb37-4376-87f9-35d45d358a68.png" width ="300" height="600">
-<img src= "https://user-images.githubusercontent.com/43650249/163661991-631c52ca-0aa7-4f5d-9e52-a36347531c74.png" width ="300" height="600">
+<img src= "https://user-images.githubusercontent.com/43650249/172528628-7027d0f5-2cd3-4303-ac56-4f60c3398a0f.png" width ="300" height="600">
 <img src= "https://user-images.githubusercontent.com/43650249/163662502-cb626b64-1478-4dff-bf8e-4ba7e8012978.png" width ="350" height="200" align="top">
 </p>
